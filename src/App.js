@@ -28,6 +28,16 @@ const directionReducer = (direction, action) => {
 const initialBlocks = [blockRowCreator(6), blockRowCreator(7), blockRowCreator(6)];
 const maxVelocity = 12
 
+const filterUnvisibleRows = (rowBlocks) => {
+  return rowBlocks.filter((row) => {
+    for(let i=0; i<row.length; i++){
+      if(row[i].visible)
+        return true
+    }
+    return false
+  });
+}
+
 function App() {
 
   const gameAreaRef = useRef(null);
@@ -43,23 +53,30 @@ function App() {
   const [strikerPosition, setStrikerPosition] = useState(window.innerWidth/2);
   const [rowBlocks, setRowBlocks] = useState(initialBlocks);
 
+  const [score, setScore] = useState(0);
+  const highScore = localStorage.getItem('highScore');
+
   const startGame = () => {
     setIsGameOver(false);
     setBallPosition({x: window.innerWidth/2, y: window.innerHeight/2});
     setRowBlocks([blockRowCreator(6), blockRowCreator(7), blockRowCreator(6)]);
     setBallVelocity(3);
     directionDispatch({ type: 'initialize'});
+    setScore(0);
   }
 
-  const filterUnvisibleRows = () => {
-    return rowBlocks.filter((row) => {
-      for(let i=0; i<row.length; i++){
-        if(row[i].visible)
-          return true
-      }
-      return false
-    });
+  const finishGame = (score) => {
+    setIsGameOver(true);
+    directionDispatch({ type: 'stop'});
+    const highScore = localStorage.getItem('highScore');
+    if(highScore<score)
+      localStorage.setItem('highScore', score);
   }
+
+  useEffect(() => {
+    if(isGameOver)
+      finishGame(score);
+  }, [isGameOver, score]);
 
   useEffect(() => {
     if(!isGameOver){
@@ -94,11 +111,9 @@ function App() {
   }, [isGameOver, direction, ballVelocity]);
 
   useEffect(() => {
-    if(rowBlocks.length>10){
+    if(rowBlocks.length>10)
       setIsGameOver(true);
-      directionDispatch({ type: 'stop'})
-    }
-  }, [rowBlocks]);
+  }, [rowBlocks, score]);
 
   useEffect(() => {
     const areaRect = gameAreaRef.current.getBoundingClientRect();
@@ -111,12 +126,13 @@ function App() {
         const blockDomElement = blocksRef.current[i][j];
         const blockCollideObject = isCollide(ballRef.current, blockDomElement);
         if(blockCollideObject.isCollide){
+          setScore(score => score+1);
 
           setRowBlocks((rowBlocks) => {
             rowBlocks[i][j].visible = false;
             return rowBlocks;
           });
-          setRowBlocks(filterUnvisibleRows());
+          setRowBlocks(filterUnvisibleRows(rowBlocks));
 
           if(blockCollideObject.collideSide.y){
             directionDispatch({ type: 'reflect-y' })
@@ -143,15 +159,13 @@ function App() {
     if(strikerCollideObject.isCollide)
       directionDispatch({ type: 'reflect-y' })
 
-    if(ballPosition.y>areaRect.bottom){
+    if(ballPosition.y>areaRect.bottom)
       setIsGameOver(true);
-      directionDispatch({ type: 'stop'})
-    }
 
-  }, [ballPosition, rowBlocks]);
+  }, [ballPosition, rowBlocks, score]);
 
   return (
-    <div className="full-width h-screen">
+    <div className="full-width h-screen flex">
       {isGameOver &&
         <div className="w-full h-screen absolute bg-black opacity-80 p-auto" style={{paddingTop: '200px'}}>
           <div className="absolute top-1/2 left-1/2 ml-[-125px] mt-[-125px] cursor-pointer" onClick={startGame}>
@@ -159,6 +173,9 @@ function App() {
           </div>
         </div>
       }
+      <div>
+        <span className="text-white text-xl">Score : {score}</span>
+      </div>
       <div
           ref={gameAreaRef}
           className="w-[1200px] bg-black mx-auto h-screen border-x border-solid"
@@ -169,6 +186,9 @@ function App() {
         )}
         <Ball ref={ballRef} position={ballPosition}/>
         <Striker ref={strikerRef} x={strikerPosition}/>
+      </div>
+      <div>
+        <span className="text-white text-xl">High Score : {highScore}</span>
       </div>
     </div>
   )
