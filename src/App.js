@@ -50,6 +50,17 @@ function App() {
     setBallVelocity(3);
     directionDispatch({ type: 'initialize'});
   }
+
+  const filterUnvisibleRows = () => {
+    return rowBlocks.filter((row) => {
+      for(let i=0; i<row.length; i++){
+        if(row[i].visible)
+          return true
+      }
+      return false
+    });
+  }
+
   useEffect(() => {
     if(!isGameOver){
       const ballVelocityIncreaseAndAddNewBlocksInterval = setInterval(() => {
@@ -59,7 +70,8 @@ function App() {
           }
           return vel
         });
-        setRowBlocks(rows => [blockRowCreator(6), ...rows]);
+        const blockCount = Math.ceil(Math.random()*8)
+        setRowBlocks(rows => [blockRowCreator(blockCount), ...rows]);
       }, 20000);
 
       return () => clearInterval(ballVelocityIncreaseAndAddNewBlocksInterval);
@@ -82,6 +94,13 @@ function App() {
   }, [isGameOver, direction, ballVelocity]);
 
   useEffect(() => {
+    if(rowBlocks.length>10){
+      setIsGameOver(true);
+      directionDispatch({ type: 'stop'})
+    }
+  }, [rowBlocks]);
+
+  useEffect(() => {
     const areaRect = gameAreaRef.current.getBoundingClientRect();
 
     rowBlocks.forEach((row, i)=> {
@@ -97,6 +116,7 @@ function App() {
             rowBlocks[i][j].visible = false;
             return rowBlocks;
           });
+          setRowBlocks(filterUnvisibleRows());
 
           if(blockCollideObject.collideSide.y){
             directionDispatch({ type: 'reflect-y' })
