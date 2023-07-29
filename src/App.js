@@ -7,11 +7,9 @@ import {blockRowCreator, isCollide} from "./utils";
 
 
 const directionInitializer = () => {
-  let x = Math.floor(Math.random() * 10) - 5;
-  if (x===0){
-    x = 5
-  }
-  return { x, y: 2.5 }
+  const x= Number((Math.random()-0.5).toFixed(2));
+  const y = Number(Math.sqrt(1-Math.pow(x, 2)).toFixed(2));
+  return { x, y }
 }
 const directionReducer = (direction, action) => {
   if(action.type === 'initialize')
@@ -28,6 +26,7 @@ const directionReducer = (direction, action) => {
 }
 
 const initialBlocks = [blockRowCreator(6), blockRowCreator(7), blockRowCreator(6)];
+const maxVelocity = 12
 
 function App() {
 
@@ -39,6 +38,7 @@ function App() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [ballPosition, setBallPosition] = useState({x: window.innerWidth/2, y: window.innerHeight/2});
   const [direction, directionDispatch] = useReducer(directionReducer, {x:0, y:0}, directionInitializer);
+  const [ballVelocity, setBallVelocity] = useState(3);
 
   const [strikerPosition, setStrikerPosition] = useState(window.innerWidth/2);
   const [rowBlocks, setRowBlocks] = useState(initialBlocks);
@@ -47,21 +47,36 @@ function App() {
     setIsGameOver(false);
     setBallPosition({x: window.innerWidth/2, y: window.innerHeight/2});
     setRowBlocks([blockRowCreator(6), blockRowCreator(7), blockRowCreator(6)]);
+    setBallVelocity(3);
     directionDispatch({ type: 'initialize'});
   }
+  useEffect(() => {
+    const ballVelocityIncreaseInterval = setInterval(() => {
+      setBallVelocity(vel => {
+        if(vel<maxVelocity){
+          return vel + 1;
+        }
+        return vel
+      });
+    }, 20000);
+
+    return () => clearInterval(ballVelocityIncreaseInterval);
+
+  }, []);
 
   useEffect(() => {
     const ballPositionInterval = setInterval(() => {
-      setBallPosition((pos) => {
-        return {
-          x: pos.x + direction.x,
-          y: pos.y + direction.y
-        }
-      });
+      if(!isGameOver){
+        setBallPosition((pos) => {
+          return {
+            x: pos.x + (direction.x * ballVelocity),
+            y: pos.y + (direction.y * ballVelocity)
+          }
+        });
+      }
     }, 10);
-
     return () => clearInterval(ballPositionInterval);
-  }, [direction]);
+  }, [isGameOver, direction, ballVelocity]);
 
   useEffect(() => {
     const areaRect = gameAreaRef.current.getBoundingClientRect();
