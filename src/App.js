@@ -7,8 +7,8 @@ import {blockRowCreator, isCollide} from "./utils";
 
 
 const directionInitializer = () => {
-  const x= Number((Math.random()-0.5).toFixed(2));
-  const y = Number(Math.sqrt(1-Math.pow(x, 2)).toFixed(2));
+  const x= (2*Math.random()-1);
+  const y = Math.sqrt(1-Math.pow(x, 2));
   return { x, y }
 }
 const directionReducer = (direction, action) => {
@@ -51,18 +51,21 @@ function App() {
     directionDispatch({ type: 'initialize'});
   }
   useEffect(() => {
-    const ballVelocityIncreaseInterval = setInterval(() => {
-      setBallVelocity(vel => {
-        if(vel<maxVelocity){
-          return vel + 1;
-        }
-        return vel
-      });
-    }, 20000);
+    if(!isGameOver){
+      const ballVelocityIncreaseAndAddNewBlocksInterval = setInterval(() => {
+        setBallVelocity(vel => {
+          if(vel<maxVelocity){
+            return vel + 1;
+          }
+          return vel
+        });
+        setRowBlocks(rows => [blockRowCreator(6), ...rows]);
+      }, 20000);
 
-    return () => clearInterval(ballVelocityIncreaseInterval);
+      return () => clearInterval(ballVelocityIncreaseAndAddNewBlocksInterval);
 
-  }, []);
+    }
+  }, [isGameOver]);
 
   useEffect(() => {
     const ballPositionInterval = setInterval(() => {
@@ -81,14 +84,13 @@ function App() {
   useEffect(() => {
     const areaRect = gameAreaRef.current.getBoundingClientRect();
 
-    const blockRows = blocksRef.current;
-    blockRows.forEach((blockRow, i) => {
-      blockRow.forEach((block, j) => {
-        if(!rowBlocks[i][j].visible){
+    rowBlocks.forEach((row, i)=> {
+      row.forEach((block, j) => {
+        if(!block.visible)
           return;
-        }
 
-        const blockCollideObject = isCollide(ballRef.current, block);
+        const blockDomElement = blocksRef.current[i][j];
+        const blockCollideObject = isCollide(ballRef.current, blockDomElement);
         if(blockCollideObject.isCollide){
 
           setRowBlocks((rowBlocks) => {
@@ -104,6 +106,7 @@ function App() {
             directionDispatch({ type: 'reflect-x' })
           }
         }
+
       });
     });
 
